@@ -12,4 +12,5 @@ if [ -z "$DATABASE_URL" ] && [ -z "$DB_HOST" ]; then
 fi
 
 php artisan migrate --force --no-interaction
+php -r "echo 'PHP memory_limit='.ini_get('memory_limit').PHP_EOL;"
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-8080}" --no-reload

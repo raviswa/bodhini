@@ -29,12 +29,13 @@ RUN apt-get update \
         libzip-dev \
         unzip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath gd intl pdo_pgsql zip \
+    && docker-php-ext-install bcmath gd intl opcache pdo_pgsql zip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY . .
+COPY docker/php.ini /usr/local/etc/php/conf.d/bodhini.ini
 COPY --from=vendor /app/vendor /app/vendor
 COPY --from=assets /app/public/build /app/public/build
 
