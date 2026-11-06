@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('subjects', static function (Blueprint $table) {
-            $table->dropIndex('subjects_name_school_id_unique');
+            $table->dropUnique('subjects_name_school_id_unique');
             $table->unique(['name', 'my_class_id']);
         });
     }
@@ -17,7 +17,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('subjects', static function (Blueprint $table) {
-            $table->dropIndex('subjects_name_my_class_id_unique');
+            $table->dropUnique('subjects_name_my_class_id_unique');
             $table->unique(['name', 'school_id']);
         });
     }
