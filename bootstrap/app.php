@@ -24,7 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware
-            ->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_AWS_ELB)
+            // Railway ends HTTPS and is the only path to this process, so its
+            // forwarded scheme is the one pages, assets, and forms must use.
+            ->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_AWS_ELB)
             ->trimStrings(['current_password', 'password', 'password_confirmation'])
             ->redirectGuestsTo(fn (): string => route('login'))
             ->redirectUsersTo(fn (): string => config('fortify.home'))

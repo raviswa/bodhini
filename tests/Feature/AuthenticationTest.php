@@ -11,6 +11,18 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_a_secure_proxy_keeps_the_login_page_on_https(): void
+    {
+        $response = $this->withHeaders([
+            'X-Forwarded-Proto' => 'https',
+        ])->get('/login');
+
+        $response->assertOk();
+        $response->assertSee('https://localhost/img/logo/logo.png', false);
+        $response->assertDontSee('http://localhost/img/logo/logo.png', false);
+        $response->assertSee('action="https://localhost/login"', false);
+    }
+
     public function test_login_screen_can_be_rendered()
     {
         $response = $this->get('/login');
