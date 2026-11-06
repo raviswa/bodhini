@@ -497,8 +497,8 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     private function enrollmentOfCurrentSchool(): HasOne
     {
-        // The school must limit both the search for the newest enrollment and
-        // the result, or another school's enrollment can win the aggregate.
+        // The school must limit both the search for the chosen enrollment and
+        // the result, or another school's enrollment can be the one shown.
         $ofCurrentSchool = function ($query): void {
             if (current_school_id() === null) {
                 $query->whereRaw('1 = 0');
@@ -512,7 +512,23 @@ class User extends Authenticatable implements MustVerifyEmail
         $relation = $this->hasOne(StudentRecord::class);
         $ofCurrentSchool($relation);
 
-        return $relation->ofMany(['is_primary' => 'max', 'id' => 'max'], $ofCurrentSchool);
+        if (current_school_id() === null) {
+            return $relation;
+        }
+
+        $schoolId = current_school_id();
+
+        // Postgres has no max(boolean). The primary enrollment wins, then the
+        // newest id, without aggregating the flag.
+        return $relation->where('student_records.id', function ($query) use ($schoolId): void {
+            $query->select('preferred.id')
+                ->from('student_records as preferred')
+                ->whereColumn('preferred.user_id', 'student_records.user_id')
+                ->where('preferred.school_id', $schoolId)
+                ->orderByDesc('preferred.is_primary')
+                ->orderByDesc('preferred.id')
+                ->limit(1);
+        });
     }
 
     /**

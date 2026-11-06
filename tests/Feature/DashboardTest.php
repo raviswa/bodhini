@@ -10,6 +10,8 @@ use App\Models\AcademicPeriod;
 use App\Models\Notice;
 use App\Models\Organization;
 use App\Models\School;
+use App\Models\StudentRecord;
+use App\Models\User;
 use App\Traits\FeatureTestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
@@ -128,6 +130,32 @@ class DashboardTest extends TestCase
             ->assertSee('id="today-overview"', false)
             ->assertSee('No register taken yet.')
             ->assertDontSee('Attendance rate over the last seven days');
+    }
+
+    public function test_the_shown_enrollment_is_the_primary_one_then_the_newest(): void
+    {
+        $school = School::factory()->create();
+        school_context()->set($school, remember: false);
+        $person = User::factory()->create();
+        $primary = StudentRecord::factory()->create([
+            'user_id' => $person->id,
+            'school_id' => $school->id,
+            'is_primary' => true,
+        ]);
+        $newer = StudentRecord::factory()->create([
+            'user_id' => $person->id,
+            'school_id' => $school->id,
+            'is_primary' => false,
+        ]);
+
+        $this->assertTrue($newer->id > $primary->id);
+        $this->assertSame($primary->id, $person->fresh()->studentRecord->id);
+        $this->assertStringNotContainsString('max(', $person->studentRecord()->toSql());
+
+        $primary->forceFill(['is_primary' => false])->save();
+        $newer->forceFill(['is_primary' => false])->save();
+
+        $this->assertSame($newer->id, $person->fresh()->studentRecord->id);
     }
 
     public function test_the_dashboard_no_longer_carries_a_working_year_card(): void
