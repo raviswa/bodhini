@@ -106,6 +106,32 @@ class InstallationTest extends TestCase
         $this->assertDatabaseCount('installations', 0);
     }
 
+    public function test_world_seeder_keeps_an_existing_catalog(): void
+    {
+        $countryId = DB::table('countries')->insertGetId([
+            'iso2' => 'ZZ',
+            'name' => 'Testland',
+            'status' => 1,
+            'phone_code' => '0',
+            'iso3' => 'ZZZ',
+            'region' => 'Test',
+            'subregion' => 'Test',
+        ]);
+
+        DB::table('states')->insert([
+            'country_id' => $countryId,
+            'name' => 'Test State',
+            'country_code' => 'ZZZ',
+        ]);
+
+        $this->seed(WorldSeeder::class);
+
+        $this->assertDatabaseHas('countries', [
+            'id' => $countryId,
+            'name' => 'Testland',
+        ]);
+    }
+
     public function test_location_options_load_states_and_cities_for_a_country(): void
     {
         $countryId = DB::table('countries')->insertGetId([
