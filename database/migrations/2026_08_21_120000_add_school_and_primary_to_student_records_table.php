@@ -24,10 +24,10 @@ return new class extends Migration
         });
 
         // The school was only reachable through the class. Write it down.
-        DB::table('student_records')
-            ->join('my_classes', 'student_records.my_class_id', '=', 'my_classes.id')
-            ->join('class_groups', 'my_classes.class_group_id', '=', 'class_groups.id')
-            ->update(['student_records.school_id' => DB::raw('class_groups.school_id')]);
+        // A join update leaves the joined table out of Postgres's SET clause.
+        DB::table('student_records')->update([
+            'school_id' => DB::raw('(select class_groups.school_id from my_classes inner join class_groups on my_classes.class_group_id = class_groups.id where my_classes.id = student_records.my_class_id)'),
+        ]);
 
         Schema::table('student_records', function (Blueprint $table): void {
             // An admission number identifies a student inside one school.
