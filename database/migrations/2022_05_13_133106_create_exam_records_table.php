@@ -16,7 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('subject_id');
             $table->integer('student_marks')->unsigned()->nullable()->default(0);
             $table->timestamps();
-            $table->unique(['user_id', 'subject_id', 'section_id', 'exam_Slot_id']);
+            $table->unique(['user_id', 'subject_id', 'section_id', 'exam_slot_id']);
         });
     }
 
