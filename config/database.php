@@ -3,6 +3,15 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$databaseUrl = (string) env('DATABASE_URL', '');
+$defaultConnection = env('DB_CONNECTION');
+
+if ($defaultConnection === null || $defaultConnection === '') {
+    $defaultConnection = str_starts_with($databaseUrl, 'postgres') ? 'pgsql' : 'mysql';
+}
+
+$requiresSsl = str_contains($databaseUrl, 'supabase') || str_contains((string) env('DB_HOST', ''), 'supabase');
+
 return [
 
     /*
@@ -16,7 +25,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => $defaultConnection,
 
     /*
     |--------------------------------------------------------------------------
@@ -104,7 +113,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('DB_SSLMODE', $requiresSsl ? 'require' : 'prefer'),
         ],
 
         'sqlsrv' => [

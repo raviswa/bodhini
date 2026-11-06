@@ -18,7 +18,10 @@ return new class extends Migration
         Schema::table('school_domains', function (Blueprint $table): void {
             $table->dropUnique(['host']);
             $table->unique(['organization_id', 'host']);
-            $table->string('verified_host')->nullable()->storedAs('IF(verified_at IS NULL, NULL, host)');
+            $verifiedHost = Schema::getConnection()->getDriverName() === 'pgsql'
+                ? 'CASE WHEN verified_at IS NULL THEN NULL ELSE host END'
+                : 'IF(verified_at IS NULL, NULL, host)';
+            $table->string('verified_host')->nullable()->storedAs($verifiedHost);
             $table->unique('verified_host');
         });
     }

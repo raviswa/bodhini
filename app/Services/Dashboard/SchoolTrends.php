@@ -91,7 +91,7 @@ class SchoolTrends
             ->join('fee_invoices', 'fee_invoices.id', '=', 'fee_invoice_records.fee_invoice_id')
             ->where('fee_invoices.school_id', current_school_id())
             ->whereBetween('fee_invoices.issue_date', [$firstMonth->toDateString(), $today->endOfDay()->toDateTimeString()])
-            ->selectRaw("date_format(fee_invoices.issue_date, '%Y-%m') as month")
+            ->selectRaw($this->monthExpression('fee_invoices.issue_date').' as month')
             ->selectRaw('sum(fee_invoice_records.amount + coalesce(fee_invoice_records.fine, 0) - coalesce(fee_invoice_records.waiver, 0)) as total')
             ->groupBy('month')
             ->pluck('total', 'month');
@@ -100,7 +100,7 @@ class SchoolTrends
             ->inSchool()
             ->stillStanding()
             ->whereBetween('received_on', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw("date_format(received_on, '%Y-%m') as month, sum(amount) as total")
+            ->selectRaw($this->monthExpression('received_on').' as month, sum(amount) as total')
             ->groupBy('month')
             ->toBase()
             ->pluck('total', 'month');
@@ -129,7 +129,9 @@ class SchoolTrends
     {
         $paid = '(select coalesce(sum(payment_allocations.amount), 0) from payment_allocations where payment_allocations.fee_invoice_record_id = fee_invoice_records.id)';
         $owed = "greatest(fee_invoice_records.amount + coalesce(fee_invoice_records.fine, 0) - coalesce(fee_invoice_records.waiver, 0) - $paid, 0)";
-        $daysLate = 'datediff(?, fee_invoices.due_date)';
+        $daysLate = DB::connection()->getDriverName() === 'pgsql'
+            ? '(?::date - fee_invoices.due_date)'
+            : 'datediff(?, fee_invoices.due_date)';
 
         $totals = DB::table('fee_invoice_records')
             ->join('fee_invoices', 'fee_invoices.id', '=', 'fee_invoice_records.fee_invoice_id')
@@ -165,7 +167,7 @@ class SchoolTrends
             ->inSchool()
             ->stillStanding()
             ->whereBetween('received_on', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw("date_format(received_on, '%Y-%m') as month, sum(amount) as total")
+            ->selectRaw($this->monthExpression('received_on').' as month, sum(amount) as total')
             ->groupBy('month')
             ->toBase()
             ->pluck('total', 'month');
@@ -173,7 +175,7 @@ class SchoolTrends
         $spent = Expense::query()
             ->inSchool()
             ->whereBetween('expense_date', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw("date_format(expense_date, '%Y-%m') as month, sum(amount) as total")
+            ->selectRaw($this->monthExpression('expense_date').' as month, sum(amount) as total')
             ->groupBy('month')
             ->toBase()
             ->pluck('total', 'month');
@@ -262,5 +264,15 @@ class SchoolTrends
     private function rate(int|float $present, int|float $recorded): ?float
     {
         return $recorded > 0 ? round($present / $recorded * 100, 1) : null;
+    }
+
+    /**
+     * Group a date column by calendar month on MySQL or Postgres.
+     */
+    private function monthExpression(string $column): string
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? "to_char({$column}, 'YYYY-MM')"
+            : "date_format({$column}, '%Y-%m')";
     }
 }
