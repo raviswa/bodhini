@@ -1,4 +1,10 @@
-# Skuul
+# Bodhini
+
+Bodhini is a school and preschool system for organisations that run more than one centre. This repository starts from [Skuul](https://github.com/yungifez/skuul) by Ebuka Ifezue. Skuul is MIT licensed. The copyright notice and the MIT permission text in [LICENSE](LICENSE) stay with every copy of this code.
+
+The running application is still the Skuul V3 codebase. New installs use `APP_NAME=Bodhini`.
+
+## Skuul codebase
 
 Skuul is a school management application. It manages organizations and campuses,
 student records, academic calendars, attendance, gradebooks, timetables, fees,

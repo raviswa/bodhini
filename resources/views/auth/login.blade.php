@@ -3,7 +3,7 @@
 @section('title', 'Login')
 
 @section('body')
-    <x-partials.authentication-card title="Welcome back" description="Sign in to continue to Skuul.">
+    <x-partials.authentication-card title="Welcome back" description="Sign in to continue to Bodhini.">
         <x-display-validation-errors />
         <livewire:auth.login-form />
         <x-slot:footer>
