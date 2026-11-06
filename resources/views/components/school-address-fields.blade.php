@@ -74,7 +74,7 @@
             value="{{ $countryValue }}"
             placeholder="Search countries"
             x-model="country"
-            x-on:change="selectedValue = $event.detail.value; country = $event.detail.value; loadCountry(false)"
+            x-on:value-change="country = $event.detail.value; loadCountry(false)"
             required
             autocomplete="country-name"
         >
@@ -109,7 +109,7 @@
             value="{{ old($stateField, $state) }}"
             placeholder="Search states or provinces"
             x-model="state"
-            x-on:change="selectedValue = $event.detail.value; state = $event.detail.value"
+            x-on:value-change="state = $event.detail.value"
             required
             autocomplete="address-level1"
         >
@@ -154,8 +154,8 @@
             value="{{ old($cityField, $city) }}"
             placeholder="Start typing or choose a city"
             x-model="city"
-            x-on:input="selectedValue = $event.target.value; city = $event.target.value"
-            x-on:change="selectedValue = $event.detail.value; city = $event.detail.value"
+            x-on:input="if ($event.target.tagName === 'INPUT') { selectedValue = $event.target.value; city = $event.target.value }"
+            x-on:value-change="city = $event.detail.value"
             required
             autocomplete="address-level2"
             class="w-full"
