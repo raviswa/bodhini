@@ -13,5 +13,7 @@ fi
 
 php artisan migrate --force --no-interaction
 php artisan db:seed --class=Database\\Seeders\\WorldSeeder --force --no-interaction
+# Fail the deploy when a known Postgres chain break still lives in the queries.
+php artisan skuul:smoke-queries --no-interaction
 php -r "echo 'PHP memory_limit='.ini_get('memory_limit').PHP_EOL;"
 exec php artisan serve --host=0.0.0.0 --port="${PORT:-8080}" --no-reload

@@ -25,7 +25,7 @@ class NoticeService
         return Notice::inSchool()
             ->whereDate('start_date', '<=', school_today()->toDateString())
             ->whereDate('stop_date', '>=', school_today()->toDateString())
-            ->where('active', 1)
+            ->where('active', true)
             ->get();
     }
 

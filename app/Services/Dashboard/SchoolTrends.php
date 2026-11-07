@@ -86,22 +86,25 @@ class SchoolTrends
     public function feesByMonth(CarbonImmutable $today, int $months = 6): array
     {
         $firstMonth = $today->startOfMonth()->subMonths($months - 1);
+        $issueMonth = $this->monthExpression('fee_invoices.issue_date');
+        $receivedMonth = $this->monthExpression('received_on');
 
         $billed = DB::table('fee_invoice_records')
             ->join('fee_invoices', 'fee_invoices.id', '=', 'fee_invoice_records.fee_invoice_id')
             ->where('fee_invoices.school_id', current_school_id())
             ->whereBetween('fee_invoices.issue_date', [$firstMonth->toDateString(), $today->endOfDay()->toDateTimeString()])
-            ->selectRaw($this->monthExpression('fee_invoices.issue_date').' as month')
+            ->selectRaw($issueMonth.' as month')
             ->selectRaw('sum(fee_invoice_records.amount + coalesce(fee_invoice_records.fine, 0) - coalesce(fee_invoice_records.waiver, 0)) as total')
-            ->groupBy('month')
+            // Postgres rejects grouping by a select alias; MySQL accepts both.
+            ->groupByRaw($issueMonth)
             ->pluck('total', 'month');
 
         $collected = StudentPayment::query()
             ->inSchool()
             ->stillStanding()
             ->whereBetween('received_on', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw($this->monthExpression('received_on').' as month, sum(amount) as total')
-            ->groupBy('month')
+            ->selectRaw($receivedMonth.' as month, sum(amount) as total')
+            ->groupByRaw($receivedMonth)
             ->toBase()
             ->pluck('total', 'month');
 
@@ -129,17 +132,20 @@ class SchoolTrends
     {
         $paid = '(select coalesce(sum(payment_allocations.amount), 0) from payment_allocations where payment_allocations.fee_invoice_record_id = fee_invoice_records.id)';
         $owed = "greatest(fee_invoice_records.amount + coalesce(fee_invoice_records.fine, 0) - coalesce(fee_invoice_records.waiver, 0) - $paid, 0)";
+        // cast(? as date) keeps PDO from treating ::date as a named parameter.
         $daysLate = DB::connection()->getDriverName() === 'pgsql'
-            ? '(?::date - fee_invoices.due_date)'
+            ? '(cast(? as date) - fee_invoices.due_date)'
             : 'datediff(?, fee_invoices.due_date)';
+        $bucket = "case when $daysLate <= 0 then 'current' when $daysLate <= 30 then 'late30' when $daysLate <= 60 then 'late60' when $daysLate <= 90 then 'late90' else 'late90plus' end";
+        $bindings = array_fill(0, 4, $today->toDateString());
 
         $totals = DB::table('fee_invoice_records')
             ->join('fee_invoices', 'fee_invoices.id', '=', 'fee_invoice_records.fee_invoice_id')
             ->where('fee_invoices.school_id', current_school_id())
             ->whereNull('fee_invoices.deleted_at')
-            ->selectRaw("case when $daysLate <= 0 then 'current' when $daysLate <= 30 then 'late30' when $daysLate <= 60 then 'late60' when $daysLate <= 90 then 'late90' else 'late90plus' end as bucket", array_fill(0, 4, $today->toDateString()))
+            ->selectRaw("$bucket as bucket", $bindings)
             ->selectRaw("sum($owed) as total")
-            ->groupBy('bucket')
+            ->groupByRaw($bucket, $bindings)
             ->pluck('total', 'bucket');
 
         return collect([
@@ -162,21 +168,23 @@ class SchoolTrends
     public function cashByMonth(CarbonImmutable $today, int $months = 6): array
     {
         $firstMonth = $today->startOfMonth()->subMonths($months - 1);
+        $receivedMonth = $this->monthExpression('received_on');
+        $spentMonth = $this->monthExpression('expense_date');
 
         $received = StudentPayment::query()
             ->inSchool()
             ->stillStanding()
             ->whereBetween('received_on', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw($this->monthExpression('received_on').' as month, sum(amount) as total')
-            ->groupBy('month')
+            ->selectRaw($receivedMonth.' as month, sum(amount) as total')
+            ->groupByRaw($receivedMonth)
             ->toBase()
             ->pluck('total', 'month');
 
         $spent = Expense::query()
             ->inSchool()
             ->whereBetween('expense_date', [$firstMonth->toDateString(), $today->toDateString()])
-            ->selectRaw($this->monthExpression('expense_date').' as month, sum(amount) as total')
-            ->groupBy('month')
+            ->selectRaw($spentMonth.' as month, sum(amount) as total')
+            ->groupByRaw($spentMonth)
             ->toBase()
             ->pluck('total', 'month');
 
@@ -199,16 +207,17 @@ class SchoolTrends
     public function incidentsByWeek(User $reader, CarbonImmutable $today, int $weeks = 8): array
     {
         $firstWeek = $today->startOfWeek()->subWeeks($weeks - 1);
+        $day = $this->dayExpression('occurred_at');
 
         $counts = Incident::query()
             ->inSchool()
             ->readableBy($reader)
             ->whereBetween('occurred_at', [$firstWeek, $today->endOfDay()])
-            ->selectRaw('date(occurred_at) as day, count(*) as total')
-            ->groupBy('day')
+            ->selectRaw($day.' as day, count(*) as total')
+            ->groupByRaw($day)
             ->toBase()
             ->get()
-            ->groupBy(fn (object $day): string => CarbonImmutable::parse($day->day)->startOfWeek()->toDateString())
+            ->groupBy(fn (object $row): string => CarbonImmutable::parse($row->day)->startOfWeek()->toDateString())
             ->map(fn (Collection $days): int => (int) $days->sum('total'));
 
         return collect(range(0, $weeks - 1))->map(function (int $offset) use ($firstWeek, $counts): array {
@@ -234,7 +243,7 @@ class SchoolTrends
             ->join('academic_cycle_sections', 'academic_cycle_sections.id', '=', 'student_records.academic_cycle_section_id')
             ->where('academic_cycle_sections.academic_year_id', $academicYearId)
             ->selectRaw('academic_cycle_sections.academic_level_id as level_id, count(*) as total')
-            ->groupBy('level_id')
+            ->groupBy('academic_cycle_sections.academic_level_id')
             ->toBase()
             ->pluck('total', 'level_id');
 
@@ -274,5 +283,15 @@ class SchoolTrends
         return DB::connection()->getDriverName() === 'pgsql'
             ? "to_char({$column}, 'YYYY-MM')"
             : "date_format({$column}, '%Y-%m')";
+    }
+
+    /**
+     * Take the calendar day from a timestamp on MySQL or Postgres.
+     */
+    private function dayExpression(string $column): string
+    {
+        return DB::connection()->getDriverName() === 'pgsql'
+            ? "cast({$column} as date)"
+            : "date({$column})";
     }
 }

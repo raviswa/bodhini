@@ -176,6 +176,31 @@ class DashboardTrendsTest extends TestCase
         $this->assertSame($before['capacity'] + 30, $after['capacity']);
     }
 
+    public function test_trend_sql_groups_by_expression_and_avoids_postgres_traps(): void
+    {
+        $this->authorized_user(['read incident']);
+        \Illuminate\Support\Facades\DB::flushQueryLog();
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+
+        $this->invoiceDue('2026-09-01', 100);
+        app(SchoolTrends::class)->feesByMonth($this->today);
+        app(SchoolTrends::class)->owedByLateness($this->today);
+        app(SchoolTrends::class)->cashByMonth($this->today);
+        app(SchoolTrends::class)->incidentsByWeek(auth()->user(), $this->today);
+
+        $sql = collect(\Illuminate\Support\Facades\DB::getQueryLog())
+            ->pluck('query')
+            ->implode("\n");
+
+        $this->assertStringNotContainsString('group by `month`', $sql);
+        $this->assertStringNotContainsString('group by `bucket`', $sql);
+        $this->assertStringNotContainsString('group by `day`', $sql);
+        $this->assertStringNotContainsString('?::date', $sql);
+        $this->assertStringContainsString('date_format(', $sql);
+        $this->assertStringContainsString('datediff(', $sql);
+        $this->assertStringContainsString('date(', $sql);
+    }
+
     public function test_the_trends_section_draws_only_charts_the_person_may_read_and_that_have_data(): void
     {
         $this->authorized_user(['read attendance', 'read incident']);

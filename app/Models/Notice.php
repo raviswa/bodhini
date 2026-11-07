@@ -162,7 +162,7 @@ class Notice extends Model
     {
         $query->where('start_date', '<=', school_today()->toDateString())
             ->where('stop_date', '>=', school_today()->toDateString())
-            ->where('active', 1);
+            ->where('active', true);
     }
 
     public function getStartDateForHumansAttribute()
