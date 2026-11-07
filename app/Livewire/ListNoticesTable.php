@@ -29,7 +29,8 @@ class ListNoticesTable extends DataTableComponent
         }
 
         if (!$user->can('update notice') && !$user->can('delete notice')) {
-            $query->active();
+            // Readers see the same published notices the dashboard and portal show.
+            $query->published()->active();
         }
 
         return $query;

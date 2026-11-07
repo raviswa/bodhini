@@ -414,6 +414,13 @@ class BackupTest extends TestCase
         $this->assertSame('mysql', $dumper->driver());
     }
 
+    public function test_the_registry_resolves_a_postgres_dumper(): void
+    {
+        $dumper = app(DatabaseDumperRegistry::class)->forDriver('pgsql');
+
+        $this->assertSame('pgsql', $dumper->driver());
+    }
+
     public function test_the_dumper_uses_the_driver_resolved_from_a_database_url(): void
     {
         config(['database.connections.url_backup' => [

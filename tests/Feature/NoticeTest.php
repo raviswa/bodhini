@@ -76,6 +76,22 @@ class NoticeTest extends TestCase
         $this->get(route('notices.show', $notice))->assertForbidden();
     }
 
+    public function test_an_ordinary_reader_does_not_see_draft_notices_in_the_list(): void
+    {
+        $this->authorized_user(['read notice']);
+        Notice::factory()->create([
+            'school_id' => $this->workingSchool()->id,
+            'title' => 'Draft sports day',
+            'status' => NoticeStatus::Draft,
+            'active' => true,
+            'start_date' => now()->subDay()->toDateString(),
+            'stop_date' => now()->addDays(3)->toDateString(),
+        ]);
+
+        Livewire::test(ListNoticesTable::class)
+            ->assertDontSee('Draft sports day');
+    }
+
     public function test_a_notice_manager_can_open_a_draft_notice(): void
     {
         $this->authorized_user(['read notice', 'update notice']);

@@ -88,14 +88,16 @@ class AppLayoutTest extends TestCase
 
     public function test_documentation_is_available_in_the_header_and_both_sidebar_layouts(): void
     {
+        config(['app.documentation_url' => 'https://docs.example.test/workspace']);
+
         $document = new \DOMDocument;
         @$document->loadHTML($this->dashboardHtml());
         $xpath = new \DOMXPath($document);
-        $links = $xpath->query('//a[@href="https://skuul.org/current/using/workspace"]');
+        $links = $xpath->query('//a[@href="https://docs.example.test/workspace"]');
 
         $this->assertNotFalse($links);
         $this->assertSame(3, $links->length);
-        $headerLinks = $xpath->query('//header//a[@href="https://skuul.org/current/using/workspace"]');
+        $headerLinks = $xpath->query('//header//a[@href="https://docs.example.test/workspace"]');
         $this->assertNotFalse($headerLinks);
         $this->assertSame(1, $headerLinks->length);
 
@@ -106,6 +108,16 @@ class AppLayoutTest extends TestCase
             $this->assertSame('Documentation (opens in a new tab)', $link->getAttribute('aria-label'));
             $this->assertFalse($link->hasAttribute('wire:navigate'));
         }
+    }
+
+    public function test_documentation_stays_hidden_until_a_url_is_configured(): void
+    {
+        config(['app.documentation_url' => null]);
+
+        $html = $this->dashboardHtml();
+
+        $this->assertStringNotContainsString('skuul.org', $html);
+        $this->assertStringNotContainsString('Documentation (opens in a new tab)', $html);
     }
 
     /**

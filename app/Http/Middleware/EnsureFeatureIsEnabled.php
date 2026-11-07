@@ -22,7 +22,8 @@ class EnsureFeatureIsEnabled
     {
         $case = Feature::tryFrom($feature);
 
-        abort_if($case === null, 500, "There is no feature called $feature.");
+        // An unknown feature slug is a missing page, not a server fault.
+        abort_if($case === null, 404);
         abort_unless(feature_enabled($case), 404);
 
         return $next($request);

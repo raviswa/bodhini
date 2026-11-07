@@ -866,6 +866,23 @@ class CourseOfferingTest extends TestCase
         Livewire::test(CreateCourseOfferingForm::class)->assertForbidden();
     }
 
+    public function test_a_soft_deleted_subject_still_names_its_offerings(): void
+    {
+        [$subject, $academicYear, $academicPeriod, $academicLevel] = $this->courseContext();
+        $offering = CourseOffering::factory()->create([
+            'school_id' => $this->workingSchool()->id,
+            'subject_id' => $subject->id,
+            'academic_year_id' => $academicYear->id,
+            'academic_period_id' => $academicPeriod->id,
+            'academic_level_id' => $academicLevel->id,
+            'name' => null,
+        ]);
+        $subject->delete();
+
+        $this->assertSame($subject->name, $offering->fresh()->displayName());
+        $this->assertNotNull($offering->fresh()->subject);
+    }
+
     private function courseContext(AcademicPeriodStatus $periodStatus = AcademicPeriodStatus::Open, ?School $school = null): array
     {
         $school ??= $this->workingSchool();

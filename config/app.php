@@ -5,6 +5,8 @@ return [
     'logo' => env('LOGO_PATH') ?: 'img/logo/logo.png',
     'favicon' => env('FAVICON_PATH') ?: 'img/logo/logo.png',
     'currency' => env('APP_CURRENCY', 'NGN'),
+    // Leave empty until Bodhini has its own docs. Skuul.org is the upstream product.
+    'documentation_url' => env('DOCUMENTATION_URL'),
 
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),

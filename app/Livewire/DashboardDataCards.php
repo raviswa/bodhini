@@ -161,7 +161,7 @@ class DashboardDataCards extends Component
             return;
         }
 
-        $today = now();
+        $today = school_today();
         $weekStart = $today->copy()->subDays(6);
 
         $records = AttendanceRecord::query()
@@ -204,7 +204,7 @@ class DashboardDataCards extends Component
 
     private function loadCalendarOverview(): void
     {
-        $today = now();
+        $today = school_today();
 
         $this->todayEvents = CalendarEvent::query()
             ->inSchool()

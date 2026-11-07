@@ -34,8 +34,12 @@ class EnsureApplicationInstalled
             if (Installation::isInstalled()) {
                 return $next($request);
             }
-        } catch (Throwable) {
-            return redirect()->route('install.index');
+        } catch (Throwable $failure) {
+            // A down database is not an unfinished install. Sending people to
+            // /install during a blip hides the real fault and looks broken.
+            report($failure);
+
+            abort(503, 'Bodhini cannot reach the database right now. Try again in a moment.');
         }
 
         return redirect()->route('install.index');

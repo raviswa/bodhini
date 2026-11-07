@@ -69,7 +69,7 @@ class CourseOffering extends Model
      */
     public function displayName(): string
     {
-        return filled($this->name) ? $this->name : $this->subject->name;
+        return filled($this->name) ? $this->name : ($this->subject?->name ?? 'Removed subject');
     }
 
     /**
@@ -237,7 +237,8 @@ class CourseOffering extends Model
      */
     public function subject(): BelongsTo
     {
-        return $this->belongsTo(Subject::class);
+        // Soft-deleted subjects still name offerings on gradebooks and syllabi.
+        return $this->belongsTo(Subject::class)->withTrashed();
     }
 
     /**
