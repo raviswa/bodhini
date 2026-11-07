@@ -132,20 +132,22 @@ class SchoolTrends
     {
         $paid = '(select coalesce(sum(payment_allocations.amount), 0) from payment_allocations where payment_allocations.fee_invoice_record_id = fee_invoice_records.id)';
         $owed = "greatest(fee_invoice_records.amount + coalesce(fee_invoice_records.fine, 0) - coalesce(fee_invoice_records.waiver, 0) - $paid, 0)";
-        // cast(? as date) keeps PDO from treating ::date as a named parameter.
+        // Embed the school day as a date literal. Binding the same day four
+        // times makes Postgres treat SELECT and GROUP BY as different
+        // expressions ($1 vs $2), which rejects fee_invoices.due_date.
+        $todayDate = $today->toDateString();
         $daysLate = DB::connection()->getDriverName() === 'pgsql'
-            ? '(cast(? as date) - fee_invoices.due_date)'
-            : 'datediff(?, fee_invoices.due_date)';
+            ? "(date '{$todayDate}' - fee_invoices.due_date)"
+            : "datediff('{$todayDate}', fee_invoices.due_date)";
         $bucket = "case when $daysLate <= 0 then 'current' when $daysLate <= 30 then 'late30' when $daysLate <= 60 then 'late60' when $daysLate <= 90 then 'late90' else 'late90plus' end";
-        $bindings = array_fill(0, 4, $today->toDateString());
 
         $totals = DB::table('fee_invoice_records')
             ->join('fee_invoices', 'fee_invoices.id', '=', 'fee_invoice_records.fee_invoice_id')
             ->where('fee_invoices.school_id', current_school_id())
             ->whereNull('fee_invoices.deleted_at')
-            ->selectRaw("$bucket as bucket", $bindings)
+            ->selectRaw("$bucket as bucket")
             ->selectRaw("sum($owed) as total")
-            ->groupByRaw($bucket, $bindings)
+            ->groupByRaw('1')
             ->pluck('total', 'bucket');
 
         return collect([

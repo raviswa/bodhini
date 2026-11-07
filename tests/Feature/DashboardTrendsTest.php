@@ -196,8 +196,10 @@ class DashboardTrendsTest extends TestCase
         $this->assertStringNotContainsString('group by `bucket`', $sql);
         $this->assertStringNotContainsString('group by `day`', $sql);
         $this->assertStringNotContainsString('?::date', $sql);
+        $this->assertStringNotContainsString('cast(? as date)', $sql);
         $this->assertStringContainsString('date_format(', $sql);
-        $this->assertStringContainsString('datediff(', $sql);
+        $this->assertStringContainsString("datediff('2026-09-24'", $sql);
+        $this->assertStringContainsString('group by 1', $sql);
         $this->assertStringContainsString('date(', $sql);
     }
 
